@@ -1,0 +1,33 @@
+name: Desplegar Microservicio 1 a AWS EC2
+
+on:
+  push:
+    branches:
+      - main # Se ejecuta cuando subes código a la rama main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Conectarse por SSH y Desplegar
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Instalar Node.js en la máquina
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo yum install -y nodejs git
+            
+            # Clonar o actualizar el repositorio
+            rm -rf microservicio-1
+            git clone https://github.com/${{ github.repository }}.git microservicio-1
+            cd microservicio-1
+            
+            # Instalar dependencias y levantar el servidor
+            npm install
+            # Usamos pm2 para que Node se quede corriendo en segundo plano
+            sudo npm install -g pm2
+            sudo pm2 stop ms1 || true
+            sudo pm2 start index.js --name ms1
