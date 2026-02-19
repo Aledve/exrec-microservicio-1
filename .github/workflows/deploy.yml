@@ -20,7 +20,7 @@ jobs:
             sudo yum update -y
             sudo yum install -y git
             
-            # 2. Instalar NVM (Node Version Manager) y Node.js 16
+            # 2. Instalar NVM y Node.js 16
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
             
             # Cargar NVM en la sesión actual
@@ -38,6 +38,14 @@ jobs:
             
             # 4. Instalar dependencias y levantar el servidor
             npm install
+            
+            # --- SOLUCIÓN DEL PUERTO 80 ---
+            # Matamos el servidor de prueba de Python que hicimos con Terraform
+            sudo pkill -f http.server || true
+            # Le damos permiso a Node.js para usar el puerto 80 en esta máquina
+            sudo setcap cap_net_bind_service=+ep $(which node)
+            # ------------------------------
+            
             # Usamos pm2 para que Node se quede corriendo en segundo plano
             npm install -g pm2
             pm2 stop ms1 || true
