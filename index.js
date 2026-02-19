@@ -3,7 +3,7 @@ const { Client } = require('pg');
 const amqp = require('amqplib');
 
 const app = express();
-const port = 80;
+const port = 3000;
 
 // 1. Configuración de PostgreSQL (Usa la IP interna de tu Instancia 1)
 const dbClient = new Client({
