@@ -16,13 +16,20 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 1. Limpiar el caché del intento fallido anterior
-            sudo rm -f /etc/yum.repos.d/nodesource*.repo
-            sudo yum clean all
+            # 1. Instalar dependencias básicas
+            sudo yum update -y
+            sudo yum install -y git
             
-            # 2. Instalar Node.js 16 en la máquina
-            curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
-            sudo yum install -y nodejs git
+            # 2. Instalar NVM (Node Version Manager) y Node.js 16
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+            
+            # Cargar NVM en la sesión actual
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            
+            # Instalar y usar Node 16
+            nvm install 16
+            nvm use 16
             
             # 3. Clonar o actualizar el repositorio
             rm -rf microservicio-1
@@ -32,6 +39,6 @@ jobs:
             # 4. Instalar dependencias y levantar el servidor
             npm install
             # Usamos pm2 para que Node se quede corriendo en segundo plano
-            sudo npm install -g pm2
-            sudo pm2 stop ms1 || true
-            sudo pm2 start index.js --name ms1
+            npm install -g pm2
+            pm2 stop ms1 || true
+            pm2 start index.js --name ms1
