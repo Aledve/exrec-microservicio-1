@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Instalar Node.js en la máquina
-            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
             sudo yum install -y nodejs git
             
             # Clonar o actualizar el repositorio
