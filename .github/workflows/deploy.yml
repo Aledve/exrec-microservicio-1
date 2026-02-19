@@ -20,7 +20,7 @@ jobs:
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
-            # 2. Descargar la última versión de tu código
+            # 2. Descargar tu código
             rm -rf microservicio-1
             git clone https://github.com/${{ github.repository }}.git microservicio-1
             cd microservicio-1
@@ -28,14 +28,11 @@ jobs:
             # 3. Instalar dependencias
             npm install
             
-            # --- TRUCO DE RED (FIREWALL) ---
-            # Matamos el servidor de Python por si acaso
+            # 4. Configurar red y limpiar procesos previos
             sudo pkill -f http.server || true
-            # Redirigimos el tráfico del puerto 80 al 3000
+            sudo pkill -f node || true
             sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000
-            # -------------------------------
             
-            # 4. Arrancar la aplicación en el puerto 3000
-            npm install -g pm2
-            pm2 stop ms1 || true
-            pm2 start index.js --name ms1
+            # 5. Arrancar la app desvinculada de la sesión SSH
+            nohup node index.js > app.log 2>&1 &
+            exit 0
