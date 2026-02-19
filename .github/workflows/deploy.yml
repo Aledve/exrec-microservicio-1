@@ -16,23 +16,28 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 1. Cargar NVM y Node.js
+            # 1. Cargar entorno
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
-            # 2. Descargar tu código
+            # 2. Actualizar código
             rm -rf microservicio-1
             git clone https://github.com/${{ github.repository }}.git microservicio-1
             cd microservicio-1
-            
-            # 3. Instalar dependencias
             npm install
             
-            # 4. Configurar red y limpiar procesos previos
+            # 3. Configurar Red (Limpiando reglas viejas primero)
             sudo pkill -f http.server || true
             sudo pkill -f node || true
+            sudo iptables -t nat -F
             sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000
             
-            # 5. El desvinculado ABSOLUTO (Desconectar teclado y pantalla)
-            nohup node index.js </dev/null > app.log 2>&1 &
-            sleep 2
+            # 4. EL LANZAMIENTO DESVINCULADO
+            # Usamos paréntesis para crear un subproceso y cortamos toda entrada/salida
+            (nohup node index.js > app.log 2>&1 < /dev/null &)
+            
+            # 5. Esperar y salir
+            echo "Esperando a que Node arranque..."
+            sleep 5
+            echo "Despliegue completado con éxito. Cerrando SSH."
+            exit 0
