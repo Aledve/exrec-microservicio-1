@@ -16,16 +16,20 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Instalar Node.js en la máquina
+            # 1. Limpiar el caché del intento fallido anterior
+            sudo rm -f /etc/yum.repos.d/nodesource*.repo
+            sudo yum clean all
+            
+            # 2. Instalar Node.js 16 en la máquina
             curl -fsSL https://rpm.nodesource.com/setup_16.x | sudo bash -
             sudo yum install -y nodejs git
             
-            # Clonar o actualizar el repositorio
+            # 3. Clonar o actualizar el repositorio
             rm -rf microservicio-1
             git clone https://github.com/${{ github.repository }}.git microservicio-1
             cd microservicio-1
             
-            # Instalar dependencias y levantar el servidor
+            # 4. Instalar dependencias y levantar el servidor
             npm install
             # Usamos pm2 para que Node se quede corriendo en segundo plano
             sudo npm install -g pm2
