@@ -16,28 +16,36 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 1. Cargar entorno
+            # 1. Cargar entorno Node
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
-            # 2. Actualizar código
+            # 2. Bajar código y dependencias
             rm -rf microservicio-1
             git clone https://github.com/${{ github.repository }}.git microservicio-1
             cd microservicio-1
             npm install
             
-            # 3. Configurar Red (Limpiando reglas viejas primero)
+            # 3. Limpiar procesos fantasma y configurar red
             sudo pkill -f http.server || true
             sudo pkill -f node || true
             sudo iptables -t nat -F
             sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000
             
-            # 4. EL LANZAMIENTO DESVINCULADO
-            # Usamos paréntesis para crear un subproceso y cortamos toda entrada/salida
-            (nohup node index.js > app.log 2>&1 < /dev/null &)
+            # 4. Crear el demonio nativo (Systemd)
+            NODE_BIN=$(which node)
+            echo "[Unit]
+            Description=Microservicio 1
             
-            # 5. Esperar y salir
-            echo "Esperando a que Node arranque..."
-            sleep 5
-            echo "Despliegue completado con éxito. Cerrando SSH."
-            exit 0
+            [Service]
+            ExecStart=$NODE_BIN /home/ec2-user/microservicio-1/index.js
+            Restart=always
+            User=ec2-user
+            
+            [Install]
+            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/ms1.service > /dev/null
+            
+            # 5. Iniciar el demonio y cerrar la conexión
+            sudo systemctl daemon-reload
+            sudo systemctl enable ms1
+            sudo systemctl restart ms1
