@@ -16,36 +16,28 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 1. Cargar entorno Node
+            # 1. Cargar el entorno de Node
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             
-            # 2. Bajar código y dependencias
+            # 2. Matar a Python y cualquier app anterior para liberar el puerto
+            sudo pkill -f http.server || true
+            sudo pkill -f node || true
+            
+            # 3. Bajar tu código fresco
             rm -rf microservicio-1
             git clone https://github.com/${{ github.repository }}.git microservicio-1
             cd microservicio-1
+            
+            # 4. Asegurar que index.js apunte al puerto 80 automáticamente
+            sed -i 's/const port = 3000;/const port = 80;/g' index.js
+            
+            # 5. Instalar dependencias y PM2
             npm install
+            npm install -g pm2
             
-            # 3. Limpiar procesos fantasma y configurar red
-            sudo pkill -f http.server || true
-            sudo pkill -f node || true
-            sudo iptables -t nat -F
-            sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000
+            # 6. EL TRUCO MAESTRO: Correr PM2 como Superusuario (Root) 
+            # Le pasamos el PATH para que Root sepa dónde encontrar Node
+            sudo env PATH=$PATH $(which pm2) start index.js --name ms1
             
-            # 4. Crear el demonio nativo (Systemd)
-            NODE_BIN=$(which node)
-            echo "[Unit]
-            Description=Microservicio 1
-            
-            [Service]
-            ExecStart=$NODE_BIN /home/ec2-user/microservicio-1/index.js
-            Restart=always
-            User=ec2-user
-            
-            [Install]
-            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/ms1.service > /dev/null
-            
-            # 5. Iniciar el demonio y cerrar la conexión
-            sudo systemctl daemon-reload
-            sudo systemctl enable ms1
-            sudo systemctl restart ms1
+            exit 0
